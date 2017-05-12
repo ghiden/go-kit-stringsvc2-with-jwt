@@ -39,3 +39,23 @@ func (mw loggingMiddleware) Count(s string) (n int) {
 	n = mw.next.Count(s)
 	return
 }
+
+type loggingAuthMiddleware struct {
+	logger log.Logger
+	next   AuthService
+}
+
+func (mw loggingAuthMiddleware) Auth(clientID string, clientSecret string) (token string, err error) {
+	defer func(begin time.Time) {
+		_ = mw.logger.Log(
+			"method", "auth",
+			"clientID", clientID,
+			"token", token,
+			"err", err,
+			"took", time.Since(begin),
+		)
+	}(time.Now())
+
+	token, err = mw.next.Auth(clientID, clientSecret)
+	return
+}

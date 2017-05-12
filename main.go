@@ -62,6 +62,38 @@ func main() {
 		encodeResponse,
 	)
 
+	requestAuthCount := kitprometheus.NewCounterFrom(stdprometheus.CounterOpts{
+		Namespace: "my_group",
+		Subsystem: "auth_service",
+		Name:      "request_count",
+		Help:      "Number of requests received.",
+	}, fieldKeys)
+	requestAuthLatency := kitprometheus.NewSummaryFrom(stdprometheus.SummaryOpts{
+		Namespace: "my_group",
+		Subsystem: "auth_service",
+		Name:      "request_latency_microseconds",
+		Help:      "Total duration of requests in microseconds.",
+	}, fieldKeys)
+
+	key := []byte("supersecret")
+	var auth AuthService
+	auth = authService{key}
+	auth = loggingAuthMiddleware{logger, auth}
+	auth = instrumentingAuthMiddleware{requestAuthCount, requestAuthLatency, auth}
+
+	options := []httptransport.ServerOption{
+		httptransport.ServerErrorEncoder(authErrorEncoder),
+		httptransport.ServerErrorLogger(logger),
+	}
+
+	authHandler := httptransport.NewServer(
+		makeAuthEndpoint(auth),
+		decodeAuthRequest,
+		encodeResponse,
+		options...,
+	)
+	http.Handle("/auth", methodControl("POST", authHandler))
+
 	http.Handle("/uppercase", methodControl("POST", uppercaseHandler))
 	http.Handle("/count", methodControl("POST", countHandler))
 	http.Handle("/metrics", promhttp.Handler())

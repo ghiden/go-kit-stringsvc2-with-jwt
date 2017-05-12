@@ -36,3 +36,20 @@ func (mw instrumentingMiddleware) Count(s string) (n int) {
 	n = mw.next.Count(s)
 	return
 }
+
+type instrumentingAuthMiddleware struct {
+	requestCount   metrics.Counter
+	requestLatency metrics.Histogram
+	next           AuthService
+}
+
+func (mw instrumentingAuthMiddleware) Auth(clientID string, clientSecret string) (token string, err error) {
+	defer func(begin time.Time) {
+		lvs := []string{"method", "auth", "error", fmt.Sprint(err != nil)}
+		mw.requestCount.With(lvs...).Add(1)
+		mw.requestLatency.With(lvs...).Observe(time.Since(begin).Seconds())
+	}(time.Now())
+
+	token, err = mw.next.Auth(clientID, clientSecret)
+	return
+}
