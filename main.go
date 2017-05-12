@@ -12,6 +12,16 @@ import (
 	httptransport "github.com/go-kit/kit/transport/http"
 )
 
+func methodControl(method string, h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == method {
+			h.ServeHTTP(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+}
+
 func main() {
 	logger := log.NewLogfmtLogger(os.Stderr)
 
@@ -52,8 +62,8 @@ func main() {
 		encodeResponse,
 	)
 
-	http.Handle("/uppercase", uppercaseHandler)
-	http.Handle("/count", countHandler)
+	http.Handle("/uppercase", methodControl("POST", uppercaseHandler))
+	http.Handle("/count", methodControl("POST", countHandler))
 	http.Handle("/metrics", promhttp.Handler())
 	logger.Log("msg", "HTTP", "addr", ":8080")
 	logger.Log("err", http.ListenAndServe(":8080", nil))
