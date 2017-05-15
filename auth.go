@@ -13,7 +13,8 @@ type AuthService interface {
 }
 
 type authService struct {
-	key []byte
+	key     []byte
+	clients map[string]string
 }
 
 type customClaims struct {
@@ -36,7 +37,7 @@ func generateToken(signingKey []byte, clientID string) (string, error) {
 }
 
 func (as authService) Auth(clientID string, clientSecret string) (string, error) {
-	if clientID == "api" && clientSecret == "secret" {
+	if as.clients[clientID] == clientSecret {
 		signed, err := generateToken(as.key, clientID)
 		if err != nil {
 			return "", errors.New(err.Error())

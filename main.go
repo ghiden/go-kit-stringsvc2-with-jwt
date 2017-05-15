@@ -7,6 +7,8 @@ import (
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
+	jwt "github.com/dgrijalva/jwt-go"
+	gokitjwt "github.com/go-kit/kit/auth/jwt"
 	"github.com/go-kit/kit/log"
 	kitprometheus "github.com/go-kit/kit/metrics/prometheus"
 	httptransport "github.com/go-kit/kit/transport/http"
@@ -50,16 +52,28 @@ func main() {
 	svc = loggingMiddleware{logger, svc}
 	svc = instrumentingMiddleware{requestCount, requestLatency, countResult, svc}
 
+	key := []byte("supersecret")
+	keys := func(token *jwt.Token) (interface{}, error) {
+		return key, nil
+	}
+
+	jwtOptions := []httptransport.ServerOption{
+		httptransport.ServerErrorEncoder(authErrorEncoder),
+		httptransport.ServerErrorLogger(logger),
+		httptransport.ServerBefore(gokitjwt.ToHTTPContext()),
+	}
 	uppercaseHandler := httptransport.NewServer(
-		makeUppercaseEndpoint(svc),
+		gokitjwt.NewParser(keys, jwt.SigningMethodHS256, &customClaims{})(makeUppercaseEndpoint(svc)),
 		decodeUppercaseRequest,
 		encodeResponse,
+		jwtOptions...,
 	)
 
 	countHandler := httptransport.NewServer(
-		makeCountEndpoint(svc),
+		gokitjwt.NewParser(keys, jwt.SigningMethodHS256, &customClaims{})(makeCountEndpoint(svc)),
 		decodeCountRequest,
 		encodeResponse,
+		jwtOptions...,
 	)
 
 	requestAuthCount := kitprometheus.NewCounterFrom(stdprometheus.CounterOpts{
@@ -75,9 +89,12 @@ func main() {
 		Help:      "Total duration of requests in microseconds.",
 	}, fieldKeys)
 
-	key := []byte("supersecret")
+	var clients = map[string]string{
+		"mobile": "m_secret",
+		"web":    "w_secret",
+	}
 	var auth AuthService
-	auth = authService{key}
+	auth = authService{key, clients}
 	auth = loggingAuthMiddleware{logger, auth}
 	auth = instrumentingAuthMiddleware{requestAuthCount, requestAuthLatency, auth}
 
