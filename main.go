@@ -47,6 +47,7 @@ func basicAuth(username string, password string, h http.Handler) http.Handler {
 
 func main() {
 	logger := log.NewLogfmtLogger(os.Stderr)
+	logger = log.With(logger, "ts", log.DefaultTimestampUTC, "caller", log.DefaultCaller)
 
 	fieldKeys := []string{"method", "client", "error"}
 	requestCount := kitprometheus.NewCounterFrom(stdprometheus.CounterOpts{
