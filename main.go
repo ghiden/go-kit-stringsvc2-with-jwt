@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/subtle"
 	"net/http"
 	"os"
 
@@ -21,6 +22,21 @@ func methodControl(method string, h http.Handler) http.Handler {
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
+	})
+}
+
+func basicAuth(username string, password string, h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user, pass, ok := r.BasicAuth()
+
+		if !ok || subtle.ConstantTimeCompare([]byte(user), []byte(username)) != 1 || subtle.ConstantTimeCompare([]byte(pass), []byte(password)) != 1 {
+			w.Header().Set("WWW-Authenticate", `Basic realm="metrics"`)
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte("Unauthorised\n"))
+			return
+		}
+
+		h.ServeHTTP(w, r)
 	})
 }
 
@@ -114,7 +130,7 @@ func main() {
 
 	http.Handle("/uppercase", methodControl("POST", uppercaseHandler))
 	http.Handle("/count", methodControl("POST", countHandler))
-	http.Handle("/metrics", promhttp.Handler())
+	http.Handle("/metrics", basicAuth("prometheus", "password", promhttp.Handler()))
 	logger.Log("msg", "HTTP", "addr", ":8080")
 	logger.Log("err", http.ListenAndServe(":8080", nil))
 }
