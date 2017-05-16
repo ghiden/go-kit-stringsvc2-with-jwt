@@ -27,7 +27,7 @@ func methodControl(method string, h http.Handler) http.Handler {
 func main() {
 	logger := log.NewLogfmtLogger(os.Stderr)
 
-	fieldKeys := []string{"method", "error"}
+	fieldKeys := []string{"method", "client", "error"}
 	requestCount := kitprometheus.NewCounterFrom(stdprometheus.CounterOpts{
 		Namespace: "my_group",
 		Subsystem: "string_service",
@@ -76,18 +76,19 @@ func main() {
 		jwtOptions...,
 	)
 
+	authFieldKeys := []string{"method", "error"}
 	requestAuthCount := kitprometheus.NewCounterFrom(stdprometheus.CounterOpts{
 		Namespace: "my_group",
 		Subsystem: "auth_service",
 		Name:      "request_count",
 		Help:      "Number of requests received.",
-	}, fieldKeys)
+	}, authFieldKeys)
 	requestAuthLatency := kitprometheus.NewSummaryFrom(stdprometheus.SummaryOpts{
 		Namespace: "my_group",
 		Subsystem: "auth_service",
 		Name:      "request_latency_microseconds",
 		Help:      "Total duration of requests in microseconds.",
-	}, fieldKeys)
+	}, authFieldKeys)
 
 	var clients = map[string]string{
 		"mobile": "m_secret",
