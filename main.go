@@ -15,6 +15,11 @@ import (
 	httptransport "github.com/go-kit/kit/transport/http"
 )
 
+const (
+	basicAuthUser = "prometheus"
+	basicAuthPass = "password"
+)
+
 func methodControl(method string, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == method {
@@ -106,6 +111,7 @@ func main() {
 		Help:      "Total duration of requests in microseconds.",
 	}, authFieldKeys)
 
+	// API clients database
 	var clients = map[string]string{
 		"mobile": "m_secret",
 		"web":    "w_secret",
@@ -130,7 +136,7 @@ func main() {
 
 	http.Handle("/uppercase", methodControl("POST", uppercaseHandler))
 	http.Handle("/count", methodControl("POST", countHandler))
-	http.Handle("/metrics", basicAuth("prometheus", "password", promhttp.Handler()))
+	http.Handle("/metrics", basicAuth(basicAuthUser, basicAuthPass, promhttp.Handler()))
 	logger.Log("msg", "HTTP", "addr", ":8080")
 	logger.Log("err", http.ListenAndServe(":8080", nil))
 }
