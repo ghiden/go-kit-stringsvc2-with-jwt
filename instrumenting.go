@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	stdjwt "github.com/dgrijalva/jwt-go"
 	"github.com/go-kit/kit/auth/jwt"
 	"github.com/go-kit/kit/metrics"
 )
@@ -18,8 +19,8 @@ type instrumentingMiddleware struct {
 
 func (mw instrumentingMiddleware) Uppercase(ctx context.Context, s string) (output string, err error) {
 	defer func(begin time.Time) {
-		custCl, _ := ctx.Value(jwt.JWTClaimsContextKey).(*customClaims)
-		lvs := []string{"method", "uppercase", "client", custCl.ClientID, "error", fmt.Sprint(err != nil)}
+		clientId, _ := ctx.Value(jwt.JWTClaimsContextKey).(stdjwt.MapClaims)["clientId"].(string)
+		lvs := []string{"method", "uppercase", "client", clientId, "error", fmt.Sprint(err != nil)}
 		mw.requestCount.With(lvs...).Add(1)
 		mw.requestLatency.With(lvs...).Observe(time.Since(begin).Seconds())
 	}(time.Now())
@@ -30,8 +31,8 @@ func (mw instrumentingMiddleware) Uppercase(ctx context.Context, s string) (outp
 
 func (mw instrumentingMiddleware) Count(ctx context.Context, s string) (n int) {
 	defer func(begin time.Time) {
-		custCl, _ := ctx.(context.Context).Value(jwt.JWTClaimsContextKey).(*customClaims)
-		lvs := []string{"method", "uppercase", "client", custCl.ClientID, "error", "false"}
+		clientId, _ := ctx.Value(jwt.JWTClaimsContextKey).(stdjwt.MapClaims)["clientId"].(string)
+		lvs := []string{"method", "uppercase", "client", clientId, "error", "false"}
 		mw.requestCount.With(lvs...).Add(1)
 		mw.requestLatency.With(lvs...).Observe(time.Since(begin).Seconds())
 		mw.countResult.Observe(float64(n))

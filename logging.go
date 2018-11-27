@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	stdjwt "github.com/dgrijalva/jwt-go"
 	"github.com/go-kit/kit/auth/jwt"
 	"github.com/go-kit/kit/log"
 )
@@ -15,10 +16,10 @@ type loggingMiddleware struct {
 
 func (mw loggingMiddleware) Uppercase(ctx context.Context, s string) (output string, err error) {
 	defer func(begin time.Time) {
-		custCl, _ := ctx.Value(jwt.JWTClaimsContextKey).(*customClaims)
+		clientId, _ := ctx.Value(jwt.JWTClaimsContextKey).(stdjwt.MapClaims)["clientId"].(string)
 		_ = mw.logger.Log(
 			"method", "uppercase",
-			"client", custCl.ClientID,
+			"client", clientId,
 			"input", s,
 			"output", output,
 			"err", err,
