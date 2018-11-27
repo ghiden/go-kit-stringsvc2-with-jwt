@@ -82,17 +82,18 @@ func main() {
 	jwtOptions := []httptransport.ServerOption{
 		httptransport.ServerErrorEncoder(authErrorEncoder),
 		httptransport.ServerErrorLogger(logger),
-		httptransport.ServerBefore(gokitjwt.ToHTTPContext()),
+		httptransport.ServerBefore(gokitjwt.HTTPToContext()),
 	}
+
 	uppercaseHandler := httptransport.NewServer(
-		gokitjwt.NewParser(keys, jwt.SigningMethodHS256, &customClaims{})(makeUppercaseEndpoint(svc)),
+		gokitjwt.NewParser(keys, jwt.SigningMethodHS256, gokitjwt.MapClaimsFactory)(makeUppercaseEndpoint(svc)),
 		decodeUppercaseRequest,
 		encodeResponse,
 		jwtOptions...,
 	)
 
 	countHandler := httptransport.NewServer(
-		gokitjwt.NewParser(keys, jwt.SigningMethodHS256, &customClaims{})(makeCountEndpoint(svc)),
+		gokitjwt.NewParser(keys, jwt.SigningMethodHS256, gokitjwt.MapClaimsFactory)(makeCountEndpoint(svc)),
 		decodeCountRequest,
 		encodeResponse,
 		jwtOptions...,
