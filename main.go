@@ -82,17 +82,18 @@ func main() {
 	jwtOptions := []httptransport.ServerOption{
 		httptransport.ServerErrorEncoder(authErrorEncoder),
 		httptransport.ServerErrorLogger(logger),
-		httptransport.ServerBefore(gokitjwt.ToHTTPContext()),
+		httptransport.ServerBefore(gokitjwt.HTTPToContext()),
 	}
+
 	uppercaseHandler := httptransport.NewServer(
-		gokitjwt.NewParser(keys, jwt.SigningMethodHS256, &customClaims{})(makeUppercaseEndpoint(svc)),
+		gokitjwt.NewParser(keys, jwt.SigningMethodHS256, userClaimFactory)(makeUppercaseEndpoint(svc)),
 		decodeUppercaseRequest,
 		encodeResponse,
 		jwtOptions...,
 	)
 
 	countHandler := httptransport.NewServer(
-		gokitjwt.NewParser(keys, jwt.SigningMethodHS256, &customClaims{})(makeCountEndpoint(svc)),
+		gokitjwt.NewParser(keys, jwt.SigningMethodHS256, userClaimFactory)(makeCountEndpoint(svc)),
 		decodeCountRequest,
 		encodeResponse,
 		jwtOptions...,
@@ -111,7 +112,6 @@ func main() {
 		Name:      "request_latency_microseconds",
 		Help:      "Total duration of requests in microseconds.",
 	}, authFieldKeys)
-
 	// API clients database
 	var clients = map[string]string{
 		"mobile": "m_secret",
@@ -140,4 +140,8 @@ func main() {
 	http.Handle("/metrics", basicAuth(basicAuthUser, basicAuthPass, promhttp.Handler()))
 	logger.Log("msg", "HTTP", "addr", ":8080")
 	logger.Log("err", http.ListenAndServe(":8080", nil))
+}
+
+func userClaimFactory() jwt.Claims {
+	return &customClaims{}
 }
